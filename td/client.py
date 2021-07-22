@@ -451,24 +451,25 @@ class TDClient():
         """
         # TODO: refactor this to update the current state of the tokens. Then implement a method to get updated tokens
         #       that will allow the caller to save it. This library should not manage the state of the credentials.
+        self.grab_access_token()
         return True
         # if 'refresh_token_expires_at' in self.state and 'access_token_expires_at' in self.state:
-        #
+        
         #     # Grab the Expire Times.
         #     refresh_token_exp = self.state['refresh_token_expires_at']
         #     access_token_exp = self.state['access_token_expires_at']
-        #
+        
         #     refresh_token_ts = datetime.datetime.fromtimestamp(refresh_token_exp)
         #     access_token_ts = datetime.datetime.fromtimestamp(access_token_exp)
-        #
+        
         #     # Grab the Expire Thresholds.
         #     refresh_token_exp_threshold = refresh_token_ts - timedelta(days=2)
         #     access_token_exp_threshold = access_token_ts - timedelta(minutes=5)
-        #
+        
         #     # Convert to Seconds.
         #     refresh_token_exp_threshold = refresh_token_exp_threshold.timestamp()
         #     access_token_exp_threshold = access_token_exp_threshold.timestamp()
-        #
+        
         #     # See if we need a new Refresh Token.
         #     if datetime.datetime.now().timestamp() > refresh_token_exp_threshold:
         #         if self._multiprocessing_safe and not already_updated_from_cache:
@@ -482,7 +483,7 @@ class TDClient():
         #         else:
         #             print("Grabbing new refresh token...")
         #             self.grab_refresh_token()
-        #
+        
         #     # See if we need a new Access Token.
         #     if datetime.datetime.now().timestamp() > access_token_exp_threshold:
         #         if self._multiprocessing_safe and not already_updated_from_cache:
@@ -496,18 +497,18 @@ class TDClient():
         #         else:
         #             print("Grabbing new access token...")
         #             self.grab_access_token()
-        #
+        
         #     return True
-        #
+        
         # else:
-        #
+        
         #     pprint.pprint(
         #         {
         #             "credential_path": str(self.credentials_path),
         #             "message": "The credential file does not contain expiration times for your tokens, please go through the oAuth process."
         #         }
         #     )
-        #
+        
         #     return False
 
     def _silent_sso(self) -> bool:
