@@ -77,7 +77,7 @@ class TDStreamerClient():
 
         try:
             self.loop = asyncio.get_event_loop()
-        except websockets.WebSocketException:
+        except:
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
 
