@@ -77,7 +77,7 @@ class TDStreamerClient():
 
         try:
             self.loop = asyncio.get_event_loop()
-        except websockets.WebSocketException:
+        except:
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
 
@@ -609,7 +609,7 @@ class TDStreamerClient():
     async def _connect(self) -> websockets.WebSocketClientProtocol:
         """Connects the Client to the TD Websocket.
 
-        Connecting to webSocket server websockets.client.connect 
+        Connecting to webSocket server websockets.connect 
         returns a WebSocketClientProtocol, which is used to send 
         and receive messages
 
@@ -628,7 +628,7 @@ class TDStreamerClient():
         login_request = self._build_login_request()
 
         # Create a connection.
-        self.connection = await websockets.client.connect(self.websocket_url)
+        self.connection = await websockets.connect(self.websocket_url)
 
         # See if we are connected.
         is_connected = await self._check_connection()
