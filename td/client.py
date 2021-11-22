@@ -52,7 +52,7 @@ class TDClient():
     """
 
     def __init__(self, client_id: str, redirect_uri: str = None, account_number: str = None, refresh_token: str = None,
-                       credentials_path: str = None, auth_flow: str = 'default', _do_init: bool = True,
+                       access_token: str = None, credentials_path: str = None, auth_flow: str = 'default', _do_init: bool = True,
                        _multiprocessing_safe = False) -> None:
         """Creates a new instance of the TDClient Object.
 
@@ -109,7 +109,7 @@ class TDClient():
 
         # Define the initalized state, these are the default values.
         self.state = {
-            'access_token': None,
+            'access_token': access_token,
             'refresh_token': refresh_token,
             'logged_in': False
         }
@@ -121,7 +121,7 @@ class TDClient():
             self._cached_state = mp.Manager().dict()
             self._multiprocessing_lock = mp.Lock()
             self._cached_state.update({
-                'access_token': None,
+                'access_token': access_token,
                 'refresh_token': None,
                 'logged_in': False
             })
@@ -271,8 +271,8 @@ class TDClient():
             self.authstate = True
             return True
 
-        if self._flask_app and self.auth_flow == 'flask':
-            run(flask_client=self._flask_app, close_after=True)
+        # if self._flask_app and self.auth_flow == 'flask':
+        #     run(flask_client=self._flask_app, close_after=True)
 
     def logout(self) -> None:
         """Clears the current TD Ameritrade Connection state."""
@@ -280,6 +280,47 @@ class TDClient():
         # change state to initalized so they will have to either get a
         # new access token or refresh token next time they use the API
         self._state_manager('init')
+
+    def get_access_token(self, client_id = None, refresh_token = None) -> str:
+        data = {
+            'client_id': self.client_id,
+            'grant_type': 'refresh_token',
+            'refresh_token': self.state['refresh_token']
+        }
+        response = requests.post(
+            url="https://api.tdameritrade.com/v1/oauth2/token",
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+            data=data
+        )
+
+        token_dict=response.json()
+
+        access_token = token_dict['access_token']
+        access_token_expire = time.time() + int(token_dict['expires_in'])
+        access_token_expire_timestamp = datetime.datetime.fromtimestamp(access_token_expire)
+        access_token_expire_timestamp = access_token_expire_timestamp.isoformat()
+
+        return access_token
+
+    def get_refresh_token(self, client_id = None, refresh_token = None) -> str:
+        data = {
+            'client_id': self.client_id,
+            'grant_type': 'refresh_token',
+            'access_type': 'offline',
+            'refresh_token': self.state['refresh_token']
+        }
+        response = requests.post(
+            url="https://api.tdameritrade.com/v1/oauth2/token",
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+            data=data
+        )
+        token_dict=response.json()
+        refresh_token = token_dict['refresh_token']
+        refresh_token_expire = time.time() + int(token_dict['refresh_token_expires_in'])
+        refresh_token_expire_timestamp = datetime.datetime.fromtimestamp(refresh_token_expire)
+        refresh_token_expire_timestamp = refresh_token_expire_timestamp.isoformat()
+
+        return refresh_token
 
     def grab_access_token(self) -> dict:
         """Refreshes the current access token.
@@ -451,7 +492,7 @@ class TDClient():
         """
         # TODO: refactor this to update the current state of the tokens. Then implement a method to get updated tokens
         #       that will allow the caller to save it. This library should not manage the state of the credentials.
-        self.grab_access_token()
+        # self.grab_access_token()
         return True
         # if 'refresh_token_expires_at' in self.state and 'access_token_expires_at' in self.state:
         
@@ -577,7 +618,7 @@ class TDClient():
         return self.state
 
     def _make_request(self, method: str, endpoint: str, mode: str = None, params: dict = None, data: dict = None, json:dict = None,
-                        order_details: bool = False) -> Any:
+                        order_details: bool = False, is_retry: bool = False) -> Any:
         """Handles all the requests in the library.
 
         A central function used to handle all the requests made in the library,
@@ -608,7 +649,7 @@ class TDClient():
         url = self._api_endpoint(endpoint=endpoint)
 
         # Make sure the token is valid if it's not a Token API call.
-        self.validate_token()
+        # self.validate_token()
         headers = self._headers(mode=mode)
 
         # Define a new session.
@@ -661,12 +702,14 @@ class TDClient():
             return response.json()
 
         else:
-
             if response.status_code == 400:
                 raise NotNulError(message=response.text)
             elif response.status_code == 401:
                 try:
+                    if is_retry:
+                        raise 'access token retry failed'
                     self.grab_access_token()
+                    return self._make_request(method, endpoint, mode, params, data, json, order_details, is_retry=True)
                 except:
                     raise TknExpError(message=response.text)
             elif response.status_code == 403:
